@@ -160,6 +160,20 @@ language word list + rules for human passwords.
 - **Phase 2** — Bruce firmware feature (C++): a one-screen "Handshake Grabber"
   (pick AP → interleaved deauth + EAPOL capture, on-device).
 
+## 🛒 Hardware
+
+The gear used for this project — Amazon affiliate links:
+
+| [<img src="docs/hw-lilygo.jpg" width="200" alt="LilyGO T-Embed CC1101 with antennas">](https://link.amazon/B0cgD7wou) | [<img src="docs/hw-lilygo-black.jpg" width="200" alt="LilyGO T-Embed CC1101 black">](https://link.amazon/B071fmsbH) | [<img src="docs/hw-antenna.jpg" width="200" alt="SMA antenna kit">](https://link.amazon/B0eMlSqeZ) |
+|:---:|:---:|:---:|
+| 🔌 **[LilyGO T-Embed CC1101](https://link.amazon/B0cgD7wou)**<br><sub>with antennas</sub> | ⬛ **[LilyGO T-Embed CC1101](https://link.amazon/B071fmsbH)**<br><sub>black, no antenna</sub> | 📡 **[SMA antenna kit](https://link.amazon/B0eMlSqeZ)** |
+
+<sub>As an Amazon Associate I earn from qualifying purchases. · En tant que Partenaire Amazon, je réalise un bénéfice sur les achats remplissant les conditions requises.</sub>
+
+## ☕ Buy me a coffee?
+
+<img src="docs/paypal-qr.png" width="180" alt="PayPal" />
+
 ## Credits & License
 
 - By **koua29**. Runs on the excellent **[Bruce firmware](https://github.com/pr3y/Bruce)**.
