@@ -65,7 +65,9 @@ connected</b> to the target AP in <b>2.4 GHz</b> (the ESP32 cannot see 5 GHz).</
 
 <h3 style="margin:18px 0 4px;font-size:15px;color:var(--ok)">✅ Method A — Targeted (recommended)</h3>
 <p style="color:var(--dim);font-size:13px">Pick <b>one</b> network and capture only that one —
-no neighbours disturbed.</p>
+no neighbours disturbed. Cleanest path: deauths just your AP, grabs a coherent M1→M4.</p>
+<div class="tip">⚠️ Keep Bruce <b>firmware up to date</b>. Older builds showed
+"Handshake saved!" but wrote <b>nothing to the SD</b> — updating fixes it.</div>
 <ol>
 <li><span class="k">WiFi → Wifi Atks.</span><img src="/docs/01-wifi-atks.jpg" class="shot"></li>
 <li><span class="k">Target Atks</span> — then Bruce scans and lets you pick the target
@@ -73,6 +75,13 @@ network from the list.<img src="/docs/02-target-atks.jpg" class="shot"></li>
 <li><span class="k">Choose your SSID</span>, then <b>Capture Handshake</b> (or
 <b>Deauth+Clone+Verif</b> to deauth + capture + verify in one go).
 <img src="/docs/03-capture-handshake.jpg" class="shot"></li>
+<li>It shows the target and <b>scans</b>, sending targeted deauths. Watch the four
+<b>EAPOL MSG 1–4</b> lines turn from red to green.
+<img src="/docs/03b-hs-scanning.jpg" class="shot"></li>
+<li>All four green → <b>CAPTURED! / Handshake saved!</b> → a clean
+<code>HS_&lt;MAC&gt;_&lt;SSID&gt;.pcap</code> lands in <code>/BrucePCAP/handshakes/</code>.
+Press <b>Esc</b> to exit, then retrieve it.
+<img src="/docs/03c-hs-captured.jpg" class="shot"></li>
 </ol>
 
 <h3 style="margin:22px 0 4px;font-size:15px">🛰️ Method B — PCAP Sniffer (broad, all APs on a channel)</h3>
@@ -113,6 +122,15 @@ Wi-Fi off/on on your own phone — only your AP then produces a handshake.</div>
     <button data-m="rules">Dict + rules</button>
     <button data-m="mask">Brute (mask)</button>
   </div>
+
+  <label>Engine</label>
+  <select id="engine" style="margin-bottom:16px">
+    <option value="aircrack" selected>aircrack-ng (CPU, all cores) only</option>
+    <option value="auto">Auto — hashcat (GPU) then aircrack (CPU) fallback</option>
+    <option value="hashcat">hashcat (GPU) only</option>
+  </select>
+  <div class="hint" style="margin:-8px 0 16px">Human password (word + digit) → aircrack
+    is usually instant. Huge dictionary/brute → hashcat (GPU). Auto tries both.</div>
 
   <div id="wlBox">
     <label>Dictionary</label>
@@ -180,8 +198,8 @@ document.querySelectorAll(".modes button").forEach(b=>b.onclick=()=>{
 });
 $("go").onclick=async()=>{
   const full=PRESETS[$("preset").value]&&PRESETS[$("preset").value].v==="FULL";
-  const cfg={cap:$("cap").value,mode,wordlist:$("wl").value,
-             mask:full?"FULL":$("mask").value,
+  const cfg={cap:$("cap").value,mode,engine:$("engine").value,
+             wordlist:$("wl").value,mask:full?"FULL":$("mask").value,
              lmin:+$("lmin").value||8, lmax:+$("lmax").value||12};
   $("go").disabled=true;
   const r=await j("/api/start",{method:"POST",body:JSON.stringify(cfg)});
@@ -203,9 +221,19 @@ async function poll(){
   $("pct").textContent=(s.pct||0)+"%";$("fill").style.width=(s.pct||0)+"%";
   $("speed").textContent=s.speed?fmtSpeed(s.speed):"—";
   $("eta").textContent="ETA "+fmtEta(s.eta);
-  $("tested").textContent="Tested: "+nf(s.tested)+" candidates";
-  $("total").textContent=s.total?"of "+nf(s.total):"";
-  $("st").textContent=s.state==="running"?"⏳ running":"✔ done";
+  if(s.stage){
+    $("tested").textContent="⚙️ "+s.stage;
+    $("total").textContent="";
+    $("st").textContent="⏳ "+s.stage;
+  }else if(s.phase==="aircrack"){
+    $("tested").textContent="🛟 aircrack fallback — verifying handshake…";
+    $("total").textContent="";
+    $("st").textContent=s.state==="running"?"⏳ aircrack":"✔ done";
+  }else{
+    $("tested").textContent="Tested: "+nf(s.tested)+" candidates";
+    $("total").textContent=s.total?"of "+nf(s.total):"";
+    $("st").textContent=s.state==="running"?"⏳ hashcat (GPU)":"✔ done";
+  }
   if(s.state==="done"){
     clearInterval(timer);$("stop").classList.add("hidden");$("again").classList.remove("hidden");
     $("fill").style.width="100%";
