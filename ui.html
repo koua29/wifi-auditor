@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WiFi Auditor</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--bd:#30363d;--tx:#e6edf3;--dim:#8b949e;
+--acc:#2f81f7;--ok:#3fb950;--warn:#d29922;--bad:#f85149}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);
+font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:32px}
+.wrap{max-width:720px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}.sub{color:var(--dim);font-size:13px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:20px;margin-bottom:16px}
+label{display:block;font-size:13px;color:var(--dim);margin:0 0 6px}
+select,input{width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);
+border-radius:8px;padding:10px;font-size:14px}
+.row{display:flex;gap:12px;margin-bottom:16px}.row>div{flex:1}
+.modes{display:flex;gap:8px;margin-bottom:16px}
+.modes button{flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);
+padding:10px;border-radius:8px;cursor:pointer;font-size:13px}
+.modes button.on{border-color:var(--acc);background:#132a4d;color:#fff}
+.go{width:100%;background:var(--acc);border:0;color:#fff;padding:13px;border-radius:8px;
+font-size:15px;font-weight:600;cursor:pointer}.go:disabled{opacity:.5;cursor:default}
+.stop{background:var(--bad)}
+.bar{height:10px;background:var(--bg);border-radius:6px;overflow:hidden;margin:14px 0 8px}
+.fill{height:100%;background:var(--acc);width:0;transition:width .4s}
+.stats{display:flex;justify-content:space-between;font-size:13px;color:var(--dim)}
+.result{padding:16px;border-radius:8px;font-size:15px;margin-top:12px;display:none}
+.result.found{background:#0d2818;border:1px solid var(--ok);color:var(--ok);display:block}
+.result.none{background:#2d1416;border:1px solid var(--bad);color:var(--bad);display:block}
+.pw{font-family:ui-monospace,Menlo,monospace;font-size:20px;color:#fff;margin-top:6px}
+.hidden{display:none}.hint{font-size:12px;color:var(--dim);margin-top:6px}
+.essid{font-family:ui-monospace,monospace;color:var(--acc)}
+.disc{background:#2d2410;border:1px solid var(--warn);color:#e3b341;border-radius:10px;
+padding:12px 16px;font-size:13px;margin-bottom:16px}
+details.guide{background:var(--card);border:1px solid var(--bd);border-radius:12px;
+padding:0 20px;margin-bottom:16px}
+details.guide summary{cursor:pointer;padding:16px 0;font-weight:600;list-style:none}
+details.guide summary::-webkit-details-marker{display:none}
+details.guide summary::before{content:"▸ ";color:var(--acc)}
+details.guide[open] summary::before{content:"▾ "}
+.guide ol{margin:0 0 16px;padding-left:20px}.guide li{margin:8px 0}
+.guide code{background:var(--bg);border:1px solid var(--bd);border-radius:5px;
+padding:1px 6px;font-family:ui-monospace,monospace;font-size:12px}
+.guide .k{color:var(--acc);font-weight:600}
+.guide .tip{background:var(--bg);border-left:3px solid var(--ok);padding:8px 12px;
+border-radius:4px;margin:12px 0;font-size:13px}
+.guide .shot{display:block;width:100%;max-width:340px;margin:10px 0 4px;
+border:1px solid var(--bd);border-radius:8px}
+.guide h3{border-top:1px solid var(--bd);padding-top:14px}
+</style></head>
+<body><div class="wrap">
+<h1>📡 WiFi Auditor</h1>
+<div class="sub">Capture on LilyGO → crack on Mac (Metal GPU).</div>
+
+<div class="disc">⚠️ <b>Authorized use only.</b> This tool is meant solely to test the
+robustness of <b>your own</b> Wi-Fi network. Capturing or cracking a network you
+do not own — or without written permission — is illegal.</div>
+
+<details class="guide">
+<summary>📖 How to capture the handshake on your LilyGO (Bruce)</summary>
+<p style="color:var(--dim);font-size:13px">The LilyGO records the WPA handshake; the
+Mac cracks it. Requirements: an <b>SD card</b> inserted, and a <b>client (phone/laptop)
+connected</b> to the target AP in <b>2.4 GHz</b> (the ESP32 cannot see 5 GHz).</p>
+
+<h3 style="margin:18px 0 4px;font-size:15px;color:var(--ok)">✅ Method A — Targeted (recommended)</h3>
+<p style="color:var(--dim);font-size:13px">Pick <b>one</b> network and capture only that one —
+no neighbours disturbed.</p>
+<ol>
+<li><span class="k">WiFi → Wifi Atks.</span><img src="/docs/01-wifi-atks.jpg" class="shot"></li>
+<li><span class="k">Target Atks</span> — then Bruce scans and lets you pick the target
+network from the list.<img src="/docs/02-target-atks.jpg" class="shot"></li>
+<li><span class="k">Choose your SSID</span>, then <b>Capture Handshake</b> (or
+<b>Deauth+Clone+Verif</b> to deauth + capture + verify in one go).
+<img src="/docs/03-capture-handshake.jpg" class="shot"></li>
+</ol>
+
+<h3 style="margin:22px 0 4px;font-size:15px">🛰️ Method B — PCAP Sniffer (broad, all APs on a channel)</h3>
+<ol>
+<li><span class="k">WiFi → Sniffer.</span><img src="/docs/04-sniffer.jpg" class="shot"></li>
+<li>The <b>PCAP SNIFFER</b> runs. Bottom-left shows the key counter
+<b>EAPOL / HS</b>; bottom-right the channel — turn the <b>wheel / press Next</b> to
+lock it on <b>your AP's channel</b> (stop the hopping).
+<img src="/docs/05-pcap-running.jpg" class="shot"></li>
+<li>Press a button to open the params. Set <b>Capture Mode → “Only EAPOL/HS”</b>, and
+here you can toggle <b>Enable/Disable deauth att</b>.
+<img src="/docs/06-params-deauth.jpg" class="shot"></li>
+<li>Hit <b>Deauth Now</b> to force connected clients to reconnect right away.
+<img src="/docs/07-deauth-now.jpg" class="shot"></li>
+</ol>
+
+<h3 style="margin:22px 0 4px;font-size:15px">🎯 Watch the HS counter — then retrieve</h3>
+<ol>
+<li>Ignore the packet count (mostly beacons). Watch <b>HS</b> at the bottom-left. When it
+reads <b>HS: 1</b>, a complete handshake was saved — you're done.
+<img src="/docs/08-hs1.jpg" class="shot"></li>
+<li><span class="k">Retrieve the .pcap</span> — pull the SD card into the Mac, or use the
+Bruce <b>WebUI</b> to download from <code>/BrucePCAP/handshakes/</code>
+(<code>HS_&lt;MAC&gt;_&lt;SSID&gt;.pcap</code>).</li>
+<li><span class="k">Load it below</span> and start the analysis.</li>
+</ol>
+<div class="tip">Cleaner &amp; kinder to neighbours (Method B): skip deauth and just toggle
+Wi-Fi off/on on your own phone — only your AP then produces a handshake.</div>
+</details>
+
+<div class="card" id="setup">
+  <label>Captured handshake (.pcap / .hc22000)</label>
+  <div class="row"><div><select id="cap"></select></div></div>
+
+  <label>Method</label>
+  <div class="modes">
+    <button data-m="dico" class="on">Dictionary</button>
+    <button data-m="rules">Dict + rules</button>
+    <button data-m="mask">Brute (mask)</button>
+  </div>
+
+  <div id="wlBox">
+    <label>Dictionary</label>
+    <select id="wl"></select>
+  </div>
+  <div id="maskBox" class="hidden">
+    <label>Preset mask</label>
+    <select id="preset"></select>
+    <label style="margin-top:12px">hashcat mask (editable)</label>
+    <input id="mask" value="?d?d?d?d?d?d?d?d">
+    <div class="hint">?d=digit ?l=lower ?u=upper ?a=any ?h=hex(lower) ?H=hex(upper).
+      Freebox: long random keys → not brute-forceable.</div>
+    <div id="fullBox" class="hidden" style="margin-top:12px">
+      <div class="row">
+        <div><label>Min length</label><input id="lmin" type="number" min="8" max="20" value="8"></div>
+        <div><label>Max length</label><input id="lmax" type="number" min="8" max="20" value="12"></div>
+      </div>
+      <div class="hint">Full brute over ?a (all chars). Each +1 length ≈ ×95 time — 8→12 is already enormous.</div>
+    </div>
+  </div>
+  <div class="hint" style="margin:14px 0"></div>
+  <button class="go" id="go">Start analysis</button>
+</div>
+
+<div class="card hidden" id="run">
+  <div class="stats"><span>Network: <span class="essid" id="essid">—</span></span>
+    <span id="st">…</span></div>
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <div class="stats"><span id="pct">0%</span><span id="speed">—</span><span id="eta">—</span></div>
+  <div class="stats" style="margin-top:6px"><span id="tested">Tested: 0</span><span id="total"></span></div>
+  <div class="result" id="res"></div>
+  <button class="go stop hidden" id="stop">Stop</button>
+  <button class="go hidden" id="again">New analysis</button>
+</div>
+
+<script>
+let mode="dico",timer=null;
+const $=id=>document.getElementById(id);
+async function j(u,o){return (await fetch(u,o)).json()}
+function fill(sel,items,fmt){sel.innerHTML=items.map(fmt).join("")}
+const rep=(c,n)=>c.repeat(n);
+const PRESETS=[
+ {l:"8 digits",v:rep("?d",8)},
+ {l:"10 digits",v:rep("?d",10)},
+ {l:"Box — 8 hex UPPER",v:rep("?H",8)},
+ {l:"SFR — 10 hex UPPER",v:rep("?H",10)},
+ {l:"Livebox / Bbox — 26 hex UPPER",v:rep("?H",26)},
+ {l:"8 alphanumeric (?a)",v:rep("?a",8)},
+ {l:"Custom…",v:""},
+ {l:"⚠️ Full brute force (?a, 8→12) — very long",v:"FULL"},
+];
+function initPresets(){
+ fill($("preset"),PRESETS,(p,i)=>`<option value="${i}">${p.l}</option>`);
+ $("preset").onchange=()=>{const p=PRESETS[$("preset").value];
+   const full=p.v==="FULL";
+   $("fullBox").classList.toggle("hidden",!full);
+   if(full){$("mask").value="?a (incremental)";$("mask").disabled=true;}
+   else{$("mask").disabled=false;if(p.v)$("mask").value=p.v;}};
+}
+document.querySelectorAll(".modes button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".modes button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");mode=b.dataset.m;
+  $("wlBox").classList.toggle("hidden",mode==="mask");
+  $("maskBox").classList.toggle("hidden",mode!=="mask");
+});
+$("go").onclick=async()=>{
+  const full=PRESETS[$("preset").value]&&PRESETS[$("preset").value].v==="FULL";
+  const cfg={cap:$("cap").value,mode,wordlist:$("wl").value,
+             mask:full?"FULL":$("mask").value,
+             lmin:+$("lmin").value||8, lmax:+$("lmax").value||12};
+  $("go").disabled=true;
+  const r=await j("/api/start",{method:"POST",body:JSON.stringify(cfg)});
+  if(r.error){alert(r.error);$("go").disabled=false;return}
+  $("setup").classList.add("hidden");$("run").classList.remove("hidden");
+  $("stop").classList.remove("hidden");$("again").classList.add("hidden");
+  $("res").className="result";$("essid").textContent=r.essid||"—";
+  poll();timer=setInterval(poll,1000);
+};
+$("stop").onclick=async()=>{await j("/api/stop",{method:"POST",body:"{}"});};
+$("again").onclick=()=>location.reload();
+function fmtEta(s){if(!s)return"—";const h=s/3600|0,m=(s%3600)/60|0;
+  return h?`${h}h${String(m).padStart(2,"0")}`:`${m} min`}
+function fmtSpeed(v){return v>1e6?(v/1e6).toFixed(1)+" MH/s":(v/1e3).toFixed(0)+" kH/s"}
+const nf=n=>(n||0).toLocaleString("en-US");
+async function poll(){
+  const s=await j("/api/status");
+  if(s.state==="idle")return;
+  $("pct").textContent=(s.pct||0)+"%";$("fill").style.width=(s.pct||0)+"%";
+  $("speed").textContent=s.speed?fmtSpeed(s.speed):"—";
+  $("eta").textContent="ETA "+fmtEta(s.eta);
+  $("tested").textContent="Tested: "+nf(s.tested)+" candidates";
+  $("total").textContent=s.total?"of "+nf(s.total):"";
+  $("st").textContent=s.state==="running"?"⏳ running":"✔ done";
+  if(s.state==="done"){
+    clearInterval(timer);$("stop").classList.add("hidden");$("again").classList.remove("hidden");
+    $("fill").style.width="100%";
+    if(s.found){$("res").className="result found";
+      $("res").innerHTML=`🎉 Password found <div class="pw">${s.password}</div>`;}
+    else{$("res").className="result none";
+      $("res").innerHTML="❌ Not found after "+nf(s.tested)+" candidates (exhausted). Your password holds — try “Dict + rules” or another wordlist.";}
+  }
+}
+load();
+async function load(){
+  const c=await j("/api/caps");
+  fill($("cap"),c.caps,x=>`<option value="${x.path}">${x.name}</option>`);
+  const w=await j("/api/wordlists");
+  fill($("wl"),w.wordlists,x=>`<option value="${x.path}">${x.name} · ${x.size}${x.big?" (large)":""}</option>`);
+  initPresets();
+}
+</script></div></body></html>

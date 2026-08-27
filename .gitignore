@@ -1,0 +1,25 @@
+# NO dictionaries in the repo (per project rule)
+wordlists/*.txt
+
+# Captures & derived files (never commit handshakes)
+*.pcap
+*.pcapng
+*.cap
+*.hc22000
+hc22000/
+*.hc22000.json.log
+
+# Runtime / logs
+*.log
+run.log
+crack.log
+fr.log
+t.log
+exact.log
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
