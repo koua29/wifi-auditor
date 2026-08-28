@@ -239,6 +239,8 @@ async function poll(){
     $("fill").style.width="100%";
     if(s.found){$("res").className="result found";
       $("res").innerHTML=`🎉 Password found <div class="pw">${s.password}</div>`;}
+    else if(s.bad_capture){$("res").className="result none";
+      $("res").innerHTML="❌ aircrack-ng couldn't read a valid handshake in this capture (incomplete / incompatible — 0 candidates tested). Switch to the <b>hashcat</b> or <b>Auto</b> engine, or recapture a clean 4/4 handshake.";}
     else{$("res").className="result none";
       $("res").innerHTML="❌ Not found after "+nf(s.tested)+" candidates (exhausted). Your password holds — try “Dict + rules” or another wordlist.";}
   }

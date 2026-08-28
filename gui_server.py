@@ -40,15 +40,18 @@ def list_caps():
     v = Path("/Volumes")
     if v.exists():
         roots += [d / "BrucePCAP" / "handshakes" for d in v.iterdir()]
-    caps = []
+    caps, stems = [], set()
     for r in roots:
         if r.exists():
             for p in sorted(r.rglob("*.pcap")) + sorted(r.rglob("*.cap")):
                 caps.append({"name": p.name, "path": str(p)})
-    # + déjà convertis
+                stems.add(p.stem)
+    # .hc22000 déjà convertis : seulement si le .pcap d'origine n'est PAS listé
+    # (évite de choisir un .hc22000 avec aircrack, qui exige le .pcap brut).
     if HC_DIR.exists():
         for p in sorted(HC_DIR.glob("*.hc22000")):
-            caps.append({"name": p.name, "path": str(p)})
+            if p.stem not in stems:
+                caps.append({"name": p.name, "path": str(p)})
     return caps
 
 
@@ -139,8 +142,11 @@ def start(cfg):
         except OSError:
             pass
     engine = cfg.get("engine", "auto")   # auto | hashcat | aircrack
-    if engine == "aircrack" and not (pcap and auditor.have("aircrack-ng")):
-        return {"error": "aircrack (CPU) exige le .pcap d'origine + aircrack-ng"}
+    if engine == "aircrack" and not auditor.have("aircrack-ng"):
+        return {"error": "aircrack-ng introuvable (brew install aircrack-ng)"}
+    if engine == "aircrack" and not pcap:
+        return {"error": "aircrack lit le .pcap brut — choisis la ligne .pcap, "
+                         "pas le .hc22000 (ou utilise le moteur hashcat/Auto)"}
     aa = attack_args(cfg)
     hccmd = (["hashcat", "-m", "22000", str(hc)] + aa +
              ["-w", "3", "--potfile-disable", "--status", "--status-json",
@@ -221,6 +227,15 @@ def status():
         out["speed"] = sum(d.get("speed", 0) for d in last.get("devices", []))
         est = last.get("estimated_stop", 0)
         out["eta"] = max(0, int(est - time.time())) if est else 0
+    # aircrack ne remonte pas de compteur JSON : on parse "N keys tested"
+    if phase == "aircrack":
+        km = re.findall(r"([\d ]+) keys tested", txt)
+        if km:
+            out["tested"] = int(km[-1].replace(" ", ""))
+    low = txt.lower()
+    bad = any(m in low for m in (
+        "no eapol data", "unable to process this ap",
+        "packets contained no eapol", "no valid wpa handshake"))
     pw = crack_result()
     if pw:
         out["found"] = True
@@ -229,6 +244,8 @@ def status():
         out["found"] = bool(pw)
         out["password"] = pw
         out["exhausted"] = not pw
+        if not pw and bad:
+            out["bad_capture"] = True
     return out
 
 
